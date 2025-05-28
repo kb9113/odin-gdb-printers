@@ -4,5 +4,5 @@ printers.py contains the printers \
 ### Todo
 - [x] slices
 - [x] strings
-- [ ] dynamic arrays
-- [ ] maps  
+- [x] dynamic arrays
+- [ ] maps

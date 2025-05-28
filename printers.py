@@ -12,7 +12,7 @@ class Slice:
         try:
             data = self.val['data']
             length = int(self.val['len'])
-            ans = "["
+            ans = str(self.val.type).removeprefix("struct ") + "{"
             for i in range(length):
                 if i != 0:
                     ans += ", "
@@ -21,7 +21,7 @@ class Slice:
                     ans += str((data + i).dereference())
                 else:
                     ans += visualized_default.to_string()
-            ans += "]"
+            ans += "}"
             return ans
         except Exception as e:
             return f"<invalid value: {e}>"
@@ -32,6 +32,8 @@ class Slice:
             length = int(self.val['len'])
             for i in range(length):
                 yield f'[{i}]', (data + i).dereference()
+            yield 'data', data
+            yield 'len', length
         except Exception as e:
             yield 'error', f'<{e}>'
 
@@ -50,11 +52,59 @@ class String:
         except Exception as e:
             return f"<invalid value: {e}>"
 
+    def children(self):
+        try:
+            data = self.val['data']
+            length = int(self.val['len'])
+            yield 'data', data
+            yield 'len', length
+        except Exception as e:
+            yield 'error', f'<{e}>'
+
+    def display_hint(self):
+        return 'array'
+
+class DynamicArray:
+    def __init__(self, val):
+        self.val = val
+
+    def to_string(self):
+        try:
+            data = self.val['data']
+            length = int(self.val['len'])
+            ans = str(self.val.type).removeprefix("struct ") + "{"
+            for i in range(length):
+                if i != 0:
+                    ans += ", "
+                visualized_default = gdb.default_visualizer((data + i).dereference())
+                if visualized_default == None:
+                    ans += str((data + i).dereference())
+                else:
+                    ans += visualized_default.to_string()
+            ans += "}"
+            return ans
+        except Exception as e:
+            return f"<invalid value: {e}>"
+
+    def children(self):
+        try:
+            data = self.val['data']
+            length = int(self.val['len'])
+            capacity = int(self.val['cap'])
+            for i in range(length):
+                yield f'[{i}]', (data + i).dereference()
+            yield 'data', data
+            yield 'len', length
+            yield 'cap', capacity
+        except Exception as e:
+            yield 'error', f'<{e}>'
+
     def display_hint(self):
         return 'array'
 
 def build_pretty_printer():
     pp = gdb.printing.RegexpCollectionPrettyPrinter("my_project")
     pp.add_printer('slice', '^\\[\\].+$', Slice)
+    pp.add_printer('dynamic_array', '^\\[dynamic\\].+$', DynamicArray)
     pp.add_printer('string', 'string', String)
     return pp
